@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35527.113 d17.12
+VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Json to Excel", "Json to Excel\Json to Excel.pyproj", "{A002D106-5BE1-4764-99FE-97D122E65BC4}"
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Json to table", "Json to Excel\Json to table.pyproj", "{A002D106-5BE1-4764-99FE-97D122E65BC4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
