@@ -7,16 +7,13 @@ from collections import defaultdict
 from datetime import datetime
 
 # ---------------------- CONFIGURATION ----------------------
-# Define your input JSON file path here
-INPUT_FILE = r"C:\Users\Syed\Documents\data.json"
-# ------------------------------------------------------------
+INPUT_FILE = r"C:\Users\SyedRehmanAli\Downloads\response.json"
+# -----------------------------------------------------------
 
 def sanitize_name(name):
-    """Sanitize sheet or column name for safe filenames."""
     return re.sub(r'[^A-Za-z0-9_.-]', '_', str(name))
 
 def uniquify(name, used_names):
-    """Ensure unique sheet names."""
     base = name
     i = 1
     while name in used_names:
@@ -26,27 +23,26 @@ def uniquify(name, used_names):
     return name
 
 def is_array_of_dicts(value):
-    """Check if a value is a list of dictionaries."""
     return isinstance(value, list) and all(isinstance(v, dict) for v in value)
 
 def union_keys(list_of_dicts):
-    """Collect all unique keys from a list of dicts."""
     keys = set()
     for d in list_of_dicts[:500]:
         keys.update(d.keys())
     return keys
 
 def traverse_and_collect(node, path, sheets, used_names, stats):
-    """Recursively traverse JSON and collect all array-of-dicts as sheets."""
+    """
+    Recursively traverse JSON and collect EVERY array-of-dicts as its own sheet.
+    IMPORTANT CHANGE: do NOT return after collecting; continue recursing to find nested arrays.
+    """
     if is_array_of_dicts(node):
-        schema = tuple(sorted(union_keys(node)))
-        sheet_name = sanitize_name(path)
+        # give the root a real name so the CSV isn't blank
+        sheet_name = sanitize_name(path or "root")
         sheet_name = uniquify(sheet_name, used_names)
-
         sheets[sheet_name].extend(node)
         stats['arrays_found'] += 1
-        print(f"🟢 Found array at '{path}' → stored as sheet '{sheet_name}' ({len(node)} rows)")
-        return
+        # <-- removed the early 'return' so we still descend into children
 
     if isinstance(node, dict):
         for k, v in node.items():
@@ -55,17 +51,24 @@ def traverse_and_collect(node, path, sheets, used_names, stats):
 
     elif isinstance(node, list):
         for i, item in enumerate(node):
-            traverse_and_collect(item, f"{path}[{i}]", sheets, used_names, stats)
+            # keep a precise path so child sheets get sensible names, e.g. "Data.Result"
+            new_path = f"{path}[{i}]" if path else f"[{i}]"
+            traverse_and_collect(item, new_path, sheets, used_names, stats)
 
 def rows_to_dataframe(rows):
-    """Convert list of dicts to DataFrame, flattening nested dicts."""
+    """Convert list of dicts to DataFrame, flattening nested dicts (deep)."""
     df = pd.DataFrame(rows)
     if not df.empty:
-        for col in df.columns:
-            if df[col].apply(lambda x: isinstance(x, dict)).any():
-                expanded = pd.json_normalize(df[col])
-                expanded.columns = [f"{col}.{sub}" for sub in expanded.columns]
-                df = pd.concat([df.drop(columns=[col]), expanded], axis=1)
+        changed = True
+        # keep expanding dict columns until none left
+        while changed:
+            changed = False
+            for col in list(df.columns):
+                if df[col].apply(lambda x: isinstance(x, dict)).any():
+                    expanded = pd.json_normalize(df[col])
+                    expanded.columns = [f"{col}.{sub}" for sub in expanded.columns]
+                    df = pd.concat([df.drop(columns=[col]), expanded], axis=1)
+                    changed = True
     return df
 
 def main():
@@ -93,7 +96,7 @@ def main():
     used_names = set()
     stats = {'arrays_found': 0}
 
-    # Traverse JSON
+    # Traverse JSON (now also captures nested arrays like Data.Result)
     traverse_and_collect(data, "", sheets, used_names, stats)
 
     # Prepare output
@@ -107,7 +110,7 @@ def main():
 
     # Write CSVs
     total_rows = 0
-    for idx, (sheet_name, rows) in enumerate(sheets.items(), start=1):
+    for sheet_name, rows in sheets.items():
         df = rows_to_dataframe(rows)
         csv_path = output_dir / f"{output_prefix}_{sanitize_name(sheet_name)}.csv"
         df.to_csv(csv_path, index=False, encoding='utf-8-sig')
