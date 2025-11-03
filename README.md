@@ -1,98 +1,131 @@
-# json_to_table.py
+# json-to-table
 
-Flatten **JSON arrays of objects** into **CSV files**—simple, predictable, and fast.
+**json_to_csv.py** — Flatten **large JSON arrays of objects** into clean **CSV files** — reliable, transparent, and completely free to use.
 
-## What it does
-- Recursively searches your JSON for every **array of objects** (e.g., `[{...}, {...}]`).
-- Writes **one CSV per discovered array** into a timestamped folder next to your input file.
-- If multiple arrays under the **same parent object** share the **same schema** (same set of keys), they are **merged into one CSV**.
-- **Skips empty arrays** and arrays that aren’t arrays of objects (arrays of scalars are ignored).
-- Each object’s **keys become CSV headers**; values become rows. Missing keys → blank cells.
+Developed after struggling with inconsistent tools, this script was built to help **anyone** convert complex JSON into usable CSVs **without hassle**.  
+Please feel free to use and share it — just don’t misuse it.  
+💼 Connect or credit me if it helps you: [**Syed Rehman Ali**](https://www.linkedin.com/in/srehmanali/)
 
-> This script **only** outputs CSV. It does not create Excel files.
+---
 
-## Requirements
+## 🚀 What it does
+
+- Recursively scans your JSON for every **array of objects** (`[{...}, {...}]`).
+- Writes a **single CSV output file** in the **same folder** as the input file, with a **timestamped filename**.
+- Prints a **detailed summary** on the console:
+  - Start time, end time, and total duration.
+  - Total number of rows processed.
+  - File paths and summary statistics.
+- Handles **very large JSON files** without crashing.
+- Each object’s **keys become CSV headers**; missing fields are filled with blanks.
+
+> This script **only outputs CSV** — it does not create Excel or database files.
+
+---
+
+## 🧩 Requirements
+
 - Python 3.8+
 - `pandas`
 
 Install once:
+
 ```bash
 python -m pip install --user pandas
 ```
 
-## Quick start
+---
+
+## ⚙️ How to Use
+
+### 1) Define your input file
+
+Inside the script, set your JSON file path in the `input_file` variable:
+
+```python
+input_file = r"C:\path\to\your_file.json"
+```
+
+You don’t need to provide a command-line argument — just edit the path in the code once.
+
+### 2) Run the script
+
 ```bash
-python json_to_table.py path/to/your.json
-```
-Output folder: `path/to/your_tables_YYYYMMDD_HHMMSS/` with one or more `*.csv` files.
-
-### Windows PowerShell one-liner
-```powershell
-py -m pip install --user pandas; py .\json_to_table.py ".\your.json"
+python json_to_csv.py
 ```
 
-## How it decides what becomes a CSV
-- **Exports:** Any array that is a list of dictionaries (list[dict]) → one CSV.
-- **Merges:** Arrays under the **same parent** with the **same schema** are merged into a single CSV (to avoid redundant files).
-- **Skips:** Empty arrays; arrays of scalars; standalone dicts (unless they appear inside an exported array).
+### 3) Output
 
-## Naming rules
-- File names are based on the **array’s key** (e.g., `employees.csv`).
-- If multiple arrays are merged, the name becomes a **`key1+key2`** style.
-- A parent hint is added where helpful to avoid collisions.
-- Names are sanitized and de-duplicated: `name`, `name_2`, `name_3`, …
+The script creates a CSV file in the **same folder** as your input JSON.
 
-## Examples
+The output filename includes a timestamp, e.g.:
 
-### 1) Top-level array of objects
-```json
-[{ "id": 1, "name": "A" }, { "id": 2, "name": "B" }]
 ```
-Produces a folder with:
-```
-root.csv
-```
-with headers `id,name` and two rows.
-
-### 2) Object with multiple arrays (same schema) → merged
-```json
-{
-  "morning": [{ "id": 1, "item": "Tea" }],
-  "evening": [{ "id": 2, "item": "Tea" }]
-}
-```
-Both arrays share keys `{id,item}` → one CSV, e.g.:
-```
-<parent>.morning+evening.csv
+your_file_20251030_115500.csv
 ```
 
-### 3) Nested arrays
-```json
-{
-  "dept": {
-    "teams": [
-      {
-        "name": "Alpha",
-        "members": [{ "user": "u1" }, { "user": "u2" }]
-      }
-    ]
-  }
-}
-```
-Exports **teams** (if object arrays) and **members** (nested array of objects) as separate CSVs.
-
-## Limitations (by design, to keep it simple)
-- Only arrays-of-dicts are exported. Single objects are not exported as standalone CSVs.
-- Very large arrays load into memory at once (no chunked/streaming write).
-- Input must be valid UTF‑8 JSON.
-- Schema matching for merging uses the **set of keys** (sampled up to 500 rows for speed).
-
-## Troubleshooting
-- **"Invalid JSON"** → Fix trailing commas/ellipses and ensure UTF‑8 encoding.
-- **"No arrays of objects found"** → Your JSON likely has no `[{...}]` structures.
-- **ModuleNotFoundError: pandas** → Run `python -m pip install --user pandas`.
+You’ll see progress details and a summary in the console.
 
 ---
 
-## License
-MIT (do what you want; attribution appreciated).
+## 🧾 Example Console Output
+
+```text
+========================================
+JSON to CSV Conversion Started
+----------------------------------------
+Input File: C:\data\sample.json
+Output File: C:\data\sample_20251030_115500.csv
+Start Time: 2025-10-30 11:55:00
+----------------------------------------
+Processing large JSON file...
+✅ Total records processed: 487,321
+✅ Unique columns found: 24
+----------------------------------------
+End Time: 2025-10-30 11:56:12
+Duration: 0:01:12
+========================================
+Conversion completed successfully!
+```
+
+---
+
+## 💡 Notes
+
+- Works with nested JSON structures — automatically flattens nested fields into columns.  
+- Automatically detects all arrays of objects inside your JSON.  
+- Writes all data into a single flattened CSV.  
+- Supports UTF-8 encoded JSON files.
+
+---
+
+## ⚠️ Limitations (by design)
+
+- Only handles arrays of dictionaries (`list[dict]`).  
+- Large files are fully loaded into memory (no streaming mode yet).  
+- Does not support JSON with trailing commas or invalid syntax.
+
+---
+
+## 🧰 Troubleshooting
+
+| Problem                         | Solution                                                     |
+|---------------------------------|--------------------------------------------------------------|
+| `ValueError: Trailing data`     | Ensure your JSON is valid UTF-8 and properly formatted.      |
+| `ModuleNotFoundError: pandas`   | Run `python -m pip install --user pandas`.                   |
+| No arrays found                 | Ensure your file contains at least one array of objects.     |
+
+---
+
+## ❤️ Open for Everyone
+
+This tool is completely free — I created it after struggling to find a simple, reliable JSON converter.  
+If it helps you, please give credit or connect on LinkedIn: 👉 **Syed Rehman Ali**
+
+Let’s make data processing simple and accessible for everyone.
+
+---
+
+## 🪪 License
+
+**MIT License** — use, modify, and distribute freely. Attribution appreciated.
